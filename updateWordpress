@@ -1,0 +1,47 @@
+#!/bin/sh -e
+
+##
+# Download and install the latest version of Wordpress.
+# Expect argument $1 to be the path to the current installation.
+
+main() {
+  ( backupOldWordpress "$1" )
+	( deleteOldFiles "$1" )
+	( fetchLatest "$1" )
+}
+
+##
+# Backup old Wordpress files.
+backupOldWordpress() {
+	cd -P "$1"
+	basename=$(pwd)
+	basename="${basename##*/}"
+	cd ..
+	tar -cvpf "${basename}.tar" "$basename"
+	xz "${basename}.tar" || bzip2 "${basename}.tar" || gz "${basename}.tar"
+}
+
+##
+# Delete the wp-includes and wp-admin directories in
+# the Wordpress installation.
+deleteOldFiles() {
+	cd -P "$1"
+	rm -rf wp-includes wp-admin
+}
+
+##
+# Fetch the new Wordpress tarball.
+fetchLatest() {
+	cd -P "$1"
+	{
+		# Fetch and unpack directly into the wordpress install.
+		curl http://wordpress.org/latest.tar.gz ||
+		wget -O- http://wordpress.org/latest.tar.gz
+	} | tar -xvzpf- --strip-components 1
+}
+
+if [ -d "$1" ]; then
+	main "$1"
+else
+	printf '%s\n' "'$1' isn't a directory."
+fi
